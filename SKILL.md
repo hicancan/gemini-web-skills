@@ -211,32 +211,43 @@ click "Redo" → submenu: "Longer" / "Shorter" / "Don't personalize" / "Try agai
 click option → wait_for ["Good response", "Bad response"]
 ```
 
-### I: Image Generation
+### I: Image Generation + Download + Watermark Removal
+
+**Generate:**
 ```
 click "Upload & tools" → click menuitemcheckbox "Create image"
-Mode activates: 20 style templates, model label shows "Nano Banana 2"
-fill textbox → send (uses same 3×2 model picker as chat)
+fill textbox → send (uses same 3×2 model picker)
 wait_for ["Good response", "Bad response"]
 ```
-**Response controls** (inside response area, not the bottom bar):
-- `button ", AI generated"` — watermark label
-- `button "Share image"` — share dialog
-- `button "Copy image"` — copy to clipboard
-- `button "Download full size image"` — triggers browser download
 
-**"More" menu** adds: `menuitem "Download image"`, `menuitem "Copy image"`, `menuitem "See thinking steps"`, `menuitem "Redo with Pro"`.
-
-**Programmatic download:** Image is `blob:` URL — not fetchable directly. Use canvas extraction:
+**Download ORIGINAL (full-size, no re-encoding):**
 ```
+click button "Download full size image"
+→ file lands in ~/Downloads/ as .png
+→ find by: Get-ChildItem ~/Downloads | Sort LastWriteTime -Desc | Select -First 1
+```
+NEVER use canvas.toDataURL() for download — it re-encodes, losing original bytes.
+
+**Remove watermark (Reverse Alpha Blending):**
+```
+Algorithm: original = (watermarked - α × 255) / (1 - α)
+  α = per-pixel watermark opacity (0.005-0.03 typical)
+  LOGO = 255 (white watermark)
+
 evaluate_script:
-  const img = document.querySelector('img[src^="blob:"]');
-  const c = document.createElement('canvas');
-  c.width = img.naturalWidth; c.height = img.naturalHeight;
-  c.getContext('2d').drawImage(img, 0, 0);
-  c.toDataURL('image/png');  // → base64 data URL
+  fetch blob URL → blob → FileReader → base64
+  OR: Python with Pillow + numpy (recommended for precision)
+    img = np.array(Image.open(path)) / 255.0
+    restored = np.clip((img - alpha_map * 1.0) / (1 - alpha_map), 0, 1) * 255
 ```
+Reference: `GargantuaX/gemini-watermark-remover` (4225 stars). Pre-calibrated alpha maps for known Gemini watermark patterns.
 
-Exit: click `button "Deselect Images"`.
+**Response controls** (inside response area):
+- `button "Download full size image"` — **always use this** for original download
+- `button "Copy image"` — clipboard
+- `button "Share image"` — share dialog
+
+Exit image mode: click `button "Deselect Images"`.
 
 ### J: Video Generation
 ```
