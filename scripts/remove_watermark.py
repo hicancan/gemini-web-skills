@@ -971,6 +971,42 @@ def evaluate_adaptive_trial(arr,config,alpha96,resolve_alpha_map,allow_adaptive)
         ac,provenance={'adaptive':True},include_image_data=False)
     return {'adaptive':adaptive,'adaptiveConfidence':ac,'adaptiveTrial':at}
 
+def merge_candidate_provenance(*parts):
+    """candidateSelector.js:84-92 exact port"""
+    merged = {}
+    for p in parts:
+        if p and isinstance(p,dict): merged.update(p)
+    return merged if merged else {}
+
+def create_candidate_region_image_data(arr,alpha_map,position,alpha_gain):
+    """candidateSelector.js:355-382 exact port"""
+    w = position['width']; h = position['height']
+    region = np.zeros((h,w,4),dtype=np.uint8)
+    for row in range(h):
+        region[row,:,:3] = arr[position['y']+row,position['x']:position['x']+w]
+        region[row,:,3] = 255
+    rpos = {'x':0,'y':0,'width':w,'height':h}
+    remove_watermark(region,alpha_map,rpos,alpha_gain)
+    return region
+
+def materialize_candidate_image_data(arr,alpha_map,position,alpha_gain):
+    """candidateSelector.js:384-388 exact port"""
+    result = arr.copy(); remove_watermark(result,alpha_map,position,alpha_gain)
+    return result
+
+def ensure_candidate_image_data(candidate,arr):
+    """candidateSelector.js:390-403 exact port"""
+    if not candidate: return candidate
+    if candidate.get('imageData') is not None: return candidate
+    return {**candidate,'imageData':materialize_candidate_image_data(arr,candidate['alphaMap'],candidate['position'],candidate.get('alphaGain',1.0))}
+
+def pick_best_validated_candidate(candidates):
+    """candidateSelector.js:340-353 exact port"""
+    accepted = [c for c in candidates if c and c.get('accepted')]
+    if not accepted: return None
+    accepted.sort(key=lambda c:(c['validationCost'],-c['improvement']))
+    return accepted[0]
+
 def refine_selected_anchor_candidate(arr,base_candidate,base_tier,adaptive_confidence):
     selected = base_candidate
     am = base_candidate['alphaMap']; pos = base_candidate['position']; cfg = base_candidate['config']
@@ -1071,11 +1107,14 @@ def select_initial_candidate(arr,config,position,alpha48,alpha96,get_alpha_map=N
             base,base_tier = adaptive_trial,'direct-match'
 
     if not base:
-        return {'selectedTrial':None,'source':'skipped','alphaMap':fallback_am,'position':position,
-                'config':config,'adaptiveConfidence':adaptive_conf,
-                'standardSpatialScore':std_sel['standardSpatialScore'],
-                'standardGradientScore':std_sel['standardGradientScore'],
-                'templateWarp':None,'alphaGain':1.0,'decisionTier':'insufficient'}
+        validated = pick_best_validated_candidate([std_sel['standardTrial'],adaptive_trial])
+        if not validated:
+            return {'selectedTrial':None,'source':'skipped','alphaMap':fallback_am,'position':position,
+                    'config':config,'adaptiveConfidence':adaptive_conf,
+                    'standardSpatialScore':std_sel['standardSpatialScore'],
+                    'standardGradientScore':std_sel['standardGradientScore'],
+                    'templateWarp':None,'alphaGain':1.0,'decisionTier':'insufficient'}
+        base,base_tier = {**validated,'source':validated['source']+'+validated'},'validated-match'
 
     if should_revert_local_shift_to_standard_trial(base,std_sel['standardTrial']):
         base,base_tier = std_sel['standardTrial'],('direct-match' if std_sel['hasReliableStandardMatch'] else 'validated-match')
