@@ -97,7 +97,7 @@ button "Settings" (bottom of sidebar, haspopup="menu")
 
 ## Models & Thinking
 
-Substring match — `"Selected "` prefix varies. Selecting a model closes the menu; reopen for thinking level.
+Same 3×2 picker applies to ALL modes (chat, image gen, video gen). Substring match — `"Selected "` prefix varies. Selecting a model closes the menu; reopen for thinking level.
 
 | Model | Match |
 |-------|-------|
@@ -106,6 +106,8 @@ Substring match — `"Selected "` prefix varies. Selecting a model closes the me
 | 3.1 Pro | `"3.1 Pro"` |
 
 Thinking: menuitem starts with `"Thinking level"` → `"Standard"` / `"Extended"`. Default: 3.1 Pro + Extended.
+
+Image gen label shows "Nano Banana 2", video gen shows "Omni" — these are descriptive, not separate pickers.
 
 ## Response State Machine
 
@@ -192,16 +194,16 @@ click option → wait_for ["Good response", "Bad response"]
 ### I: Image Generation
 ```
 click "Upload & tools" → click menuitemcheckbox "Create image"
-Mode activates: 20 style templates, "Create with Nano Banana 2"
-fill textbox with image description → send
+Mode activates: 20 style templates, "Create with Nano Banana 2" label
+fill textbox → send (uses same 3×2 model picker)
 Exit: click "Deselect Images"
 ```
 
 ### J: Video Generation
 ```
 click "Upload & tools" → click menuitemcheckbox "Create video"
-Mode activates: 18 templates, "Create with Omni", aspect ratio "Landscape (16:9)"
-fill textbox with video description → send
+Mode activates: 18 templates, "Create with Omni" label, 16:9 aspect
+fill textbox → send (uses same 3×2 model picker)
 Exit: click "Deselect Videos"
 ```
 
