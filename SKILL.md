@@ -121,6 +121,7 @@ Image gen label shows "Nano Banana 2", video gen shows "Omni" — these are desc
 
 ## Response Page Structure
 
+**Text response:**
 ```
 heading "You said <prompt>"
   button "Copy prompt"   button "Edit"
@@ -129,6 +130,25 @@ heading "Gemini said"
   button "Good response"   button "Bad response"
   button "Redo" → submenu: Longer / Shorter / Don't personalize / Try again
   button "Copy"   button "Show more options"
+```
+
+**Image response** (inside `generic live="polite"`):
+```
+button ", AI generated"              ← watermark label
+button "Share image"                 ← share dialog
+button "Copy image"                  ← clipboard
+button "Download full size image"    ← browser download
+```
+Image is `blob:` URL. Extract via canvas: `drawImage → toDataURL('image/png')`.
+
+**"Show more options" menu:**
+```
+menuitem "Copy image"
+menuitem "Download image"
+menuitem "Listen"
+menuitem "Redo with Pro"
+menuitem "Report legal issue"
+menuitem "See thinking steps"
 ```
 
 ## Flows
@@ -194,10 +214,29 @@ click option → wait_for ["Good response", "Bad response"]
 ### I: Image Generation
 ```
 click "Upload & tools" → click menuitemcheckbox "Create image"
-Mode activates: 20 style templates, "Create with Nano Banana 2" label
-fill textbox → send (uses same 3×2 model picker)
-Exit: click "Deselect Images"
+Mode activates: 20 style templates, model label shows "Nano Banana 2"
+fill textbox → send (uses same 3×2 model picker as chat)
+wait_for ["Good response", "Bad response"]
 ```
+**Response controls** (inside response area, not the bottom bar):
+- `button ", AI generated"` — watermark label
+- `button "Share image"` — share dialog
+- `button "Copy image"` — copy to clipboard
+- `button "Download full size image"` — triggers browser download
+
+**"More" menu** adds: `menuitem "Download image"`, `menuitem "Copy image"`, `menuitem "See thinking steps"`, `menuitem "Redo with Pro"`.
+
+**Programmatic download:** Image is `blob:` URL — not fetchable directly. Use canvas extraction:
+```
+evaluate_script:
+  const img = document.querySelector('img[src^="blob:"]');
+  const c = document.createElement('canvas');
+  c.width = img.naturalWidth; c.height = img.naturalHeight;
+  c.getContext('2d').drawImage(img, 0, 0);
+  c.toDataURL('image/png');  // → base64 data URL
+```
+
+Exit: click `button "Deselect Images"`.
 
 ### J: Video Generation
 ```
