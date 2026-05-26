@@ -1,6 +1,6 @@
 ---
 name: gemini-web
-description: Use when user needs Google Gemini (gemini.google.com) — upload files, ask questions, get AI responses. Handles: chats, model selection, file upload via bridge, prompts, response extraction, stop/edit/redo, notebooks (RAG), image/video generation, code import, Deep research, Canvas, Settings.
+description: Use when user needs Google Gemini (gemini.google.com) — upload files, ask questions, get AI responses. Handles: chats, model selection, file upload via bridge, prompts, response extraction, stop/edit/redo, notebooks (RAG), image/video generation, code import, Deep research, Settings.
 ---
 
 # Gemini Web Interface
@@ -50,13 +50,10 @@ button "Upload & tools"
     │   └── menuitem "Add from Drive. Sheets, Docs, Slides"        → Drive picker dialog
     ├── button "More uploads"                                       → expands submenu:
     │   └── group "More upload options"
-    │       ├── menuitem "Google Photos"                            → Photos picker
-    │       ├── menuitem "Avatar"                                   → likeness page
     │       ├── menuitem "Import code"                              → dialog: GitHub URL + Upload folder
     │       └── menuitem "Notebooks"                                → import from notebook
     ├── menuitemcheckbox "Create image"     → image gen mode (20 templates, Nano Banana 2)
     ├── menuitemcheckbox "Create video"     → video gen mode (18 templates, Omni, 16:9)
-    ├── menuitemcheckbox "Canvas"           → coding/prototyping mode
     └── button "More tools"                 → expands submenu:
         ├── menuitemcheckbox "Deep research"
         ├── menuitemcheckbox "Create music"
@@ -64,7 +61,7 @@ button "Upload & tools"
         └── switch "Personal Intelligence"  → disable for clean responses
 ```
 
-**Mode toggles:** Each menuitemcheckbox toggles a mode. When active, a `button "Deselect <Mode>"` appears. Click it to exit. Create image also shows a `button "Deselect Images"`, Create video shows `button "Deselect Videos"`, Canvas shows `button "Deselect Canvas"`.
+**Mode toggles:** Create image adds `button "Deselect Images"`, Create video adds `button "Deselect Videos"`. Click to exit the mode.
 
 **"Import code" dialog:**
 ```
@@ -84,7 +81,6 @@ button "Settings" (bottom of sidebar, haspopup="menu")
     ├── menuitem "Activity"
     ├── menuitem "Personal Intelligence"
     ├── menuitem "Import memory to Gemini"
-    ├── menuitem "Avatar"
     ├── menuitem "Usage Limits"
     ├── menuitem "Scheduled actions"
     ├── menuitem "Gems"
@@ -209,20 +205,13 @@ fill textbox with video description → send
 Exit: click "Deselect Videos"
 ```
 
-### K: Canvas
-```
-click "Upload & tools" → click menuitemcheckbox "Canvas"
-Mode for coding, writing, slides.
-Exit: click "Deselect Canvas"
-```
-
-### L: Import Code
+### K: Import Code
 ```
 click "Upload & tools" → click "More uploads" → click "Import code"
 dialog with: textbox "GitHub repository or branch URL" + button "Upload folder" + button "Import"
 ```
 
-### M: Notebooks
+### L: Notebooks
 
 **Create:**
 ```
@@ -291,4 +280,3 @@ evaluate_script: document.getElementById('mcp-bridge')?.remove()
 - Edit uses dedicated `textbox "Edit prompt"` separate from main textbox
 - Model list hardcoded; verify with snapshot if selection fails
 - Temporary chat button disappears after first message in conversation
-- "More uploads" submenu items (Google Photos, Avatar, Notebooks) not deeply tested
