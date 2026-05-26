@@ -12,6 +12,13 @@ Automates gemini.google.com via Chrome DevTools MCP. Every locator tested agains
 - Chrome DevTools MCP connected
 - Logged into gemini.google.com
 
+## Defaults
+
+- **Model:** 3.1 Pro + Extended (the highest tier). Always use unless user explicitly specifies otherwise.
+- **Image output:** Download to `<project>/gemini_output/<title>/` with two subfolders:
+  - `original/` — button-downloaded full-resolution file (MUST use `button "Download full size image"`)
+  - `cleaned/` — after reverse alpha blending watermark removal
+
 ## URL Patterns
 
 | Action | URL |
@@ -213,39 +220,32 @@ click option → wait_for ["Good response", "Bad response"]
 
 ### I: Image Generation + Download + Watermark Removal
 
+**Prerequisite:** model MUST be 3.1 Pro + Extended (Flow C) unless user overrides.
+
 **Generate:**
 ```
 click "Upload & tools" → click menuitemcheckbox "Create image"
-fill textbox → send (uses same 3×2 model picker)
+fill textbox → send
 wait_for ["Good response", "Bad response"]
 ```
 
-**Download ORIGINAL (full-size, no re-encoding):**
+**Download ORIGINAL (full-resolution, MUST use button):**
 ```
 click button "Download full size image"
-→ file lands in ~/Downloads/ as .png
-→ find by: Get-ChildItem ~/Downloads | Sort LastWriteTime -Desc | Select -First 1
+→ file lands in ~/Downloads/ as Gemini_Generated_Image_<hash>.png
+→ 2816x1536 typical, ~5.5MB (canvas re-encode is only 1024x559, 139KB — DO NOT use canvas)
 ```
-NEVER use canvas.toDataURL() for download — it re-encodes, losing original bytes.
 
-**Remove watermark (Reverse Alpha Blending):**
+**Organize files:**
 ```
-Algorithm: original = (watermarked - α × 255) / (1 - α)
-  α = per-pixel watermark opacity (0.005-0.03 typical)
-  LOGO = 255 (white watermark)
-
-evaluate_script:
-  fetch blob URL → blob → FileReader → base64
-  OR: Python with Pillow + numpy (recommended for precision)
-    img = np.array(Image.open(path)) / 255.0
-    restored = np.clip((img - alpha_map * 1.0) / (1 - alpha_map), 0, 1) * 255
+mkdir <project>/gemini_output/<chat_title_or_user_query>/
+mkdir <project>/gemini_output/<title>/original/
+mkdir <project>/gemini_output/<title>/cleaned/
+Move downloaded file → original/
 ```
-Reference: `GargantuaX/gemini-watermark-remover` (4225 stars). Pre-calibrated alpha maps for known Gemini watermark patterns.
 
-**Response controls** (inside response area):
-- `button "Download full size image"` — **always use this** for original download
-- `button "Copy image"` — clipboard
-- `button "Share image"` — share dialog
+**Remove watermark:** See `references/reverse-alpha-blending.md` for theory.
+Run: `uv run --with Pillow --with numpy scripts/remove_watermark.py <input> --alpha 0.01 -o cleaned/cleaned.png`
 
 Exit image mode: click `button "Deselect Images"`.
 
