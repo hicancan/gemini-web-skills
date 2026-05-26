@@ -1,453 +1,294 @@
 ---
 name: gemini-web
-description: Use when user needs Google Gemini (gemini.google.com) — upload files, ask questions, get AI responses. Handles: new/existing chats, model selection (3 models x 2 thinking levels), single/multi-file upload via bridge, prompts, response extraction, stop/edit/redo, notebooks with sources (RAG).
+description: Use when user needs Google Gemini (gemini.google.com) — upload files, ask questions, get AI responses. Handles: chats, model selection, file upload via bridge, prompts, response extraction, stop/edit/redo, notebooks (RAG), image/video generation, code import, Deep research, Canvas, Settings.
 ---
 
 # Gemini Web Interface
 
-Automates Google Gemini Web via Chrome DevTools MCP.
+Automates gemini.google.com via Chrome DevTools MCP. Every locator tested against live DOM. Every state transition verified.
 
 ## Prerequisites
 
 - Chrome DevTools MCP connected
-- User logged into gemini.google.com
-- Files to upload exist on local disk
+- Logged into gemini.google.com
 
 ## URL Patterns
 
 | Action | URL |
 |--------|-----|
 | New chat | `https://gemini.google.com/app` |
-| Specific chat | `https://gemini.google.com/app/<chat_id>` |
+| Specific chat | `https://gemini.google.com/app/<chat_id>` (NOT `c_<id>`) |
 | Search chats | `https://gemini.google.com/search` |
-
-Extract chat_id from sidebar recents link: `href="/app/<chat_id>"`. The link text is Gemini's auto-generated title. Do NOT use `c_` prefix — it loads a new chat, not the existing one.
+| All notebooks | `https://gemini.google.com/notebooks/view` |
+| Specific notebook | `https://gemini.google.com/notebook/<uuid>` |
+| Create notebook | `https://gemini.google.com/notebooks/create` |
 
 ## Dynamic UIDs
 
-Every element UID changes on each page load. After ANY click or navigation, take a fresh snapshot. Never cache UIDs.
+Every UID changes on each page load. After ANY click or navigation, snapshot. Never cache UIDs.
 
 ## Core Elements
 
 | Element | Locator |
 |---------|---------|
-| New chat | `link "New chat"` in `navigation "Main actions menu"` (shortcut: `Ctrl+Shift+O`) |
-| Recent chats | Links in expanded `button "Toggle Recents"` section |
+| New chat | `link "New chat"` in `navigation "Main actions menu"` (Ctrl+Shift+O) |
 | Textbox | `textbox "Enter a prompt for Gemini"` (Quill.js, multiline) |
-| Send button | `button "Send message"` (disabled until text + uploads ready; becomes `"Stop response"` during generation) |
-| Upload & tools | `button "Upload & tools"` (the "+" button near textbox) |
-| Mode picker | `button` whose label starts with `"Open mode picker"` |
-| Upload files menuitem | `menuitem "Upload files. Documents, data, code files"` — inside `menu "Upload file options"` |
-| Conversation menu | `button "Open menu for conversation actions."` (appears after first message) |
-| Temporary chat | `button "Temporary chat"` (disappears after first message in conversation) |
+| Send button | `button "Send message"` → becomes `"Stop response"` during generation |
+| Upload & tools | `button "Upload & tools"` (the + button) |
+| Mode picker | `button` label starts `"Open mode picker"` |
+| Temporary chat | `button "Temporary chat"` (vanishes after 1st message in conversation) |
+| Conversation menu | `button "Open menu for conversation actions."` (after 1st message) |
+| Edit textbox | `textbox "Edit prompt"` (NOT the main textbox) |
 
-## Upload & Tools Menu Structure
+## Complete "+" Menu Tree
 
-Clicking `button "Upload & tools"` opens `menu "Menu options"` containing:
+```
+button "Upload & tools"
+└── menu "Menu options"
+    ├── menu "Upload file options"
+    │   ├── menuitem "Upload files. Documents, data, code files"    → opens file picker
+    │   └── menuitem "Add from Drive. Sheets, Docs, Slides"        → Drive picker dialog
+    ├── button "More uploads"                                       → expands submenu:
+    │   └── group "More upload options"
+    │       ├── menuitem "Google Photos"                            → Photos picker
+    │       ├── menuitem "Avatar"                                   → likeness page
+    │       ├── menuitem "Import code"                              → dialog: GitHub URL + Upload folder
+    │       └── menuitem "Notebooks"                                → import from notebook
+    ├── menuitemcheckbox "Create image"     → image gen mode (20 templates, Nano Banana 2)
+    ├── menuitemcheckbox "Create video"     → video gen mode (18 templates, Omni, 16:9)
+    ├── menuitemcheckbox "Canvas"           → coding/prototyping mode
+    └── button "More tools"                 → expands submenu:
+        ├── menuitemcheckbox "Deep research"
+        ├── menuitemcheckbox "Create music"
+        ├── menuitemcheckbox "Guided learning"
+        └── switch "Personal Intelligence"  → disable for clean responses
+```
 
-**Upload section:**
-- `menu "Upload file options"`:
-  - `menuitem "Upload files. Documents, data, code files"` — opens file dialog, creates `input[name="Filedata"]`
-  - `menuitem "Add from Drive. Sheets, Docs, Slides"`
-- `button "More uploads"` — additional upload sources (differs from `"More tools"`!)
+**Mode toggles:** Each menuitemcheckbox toggles a mode. When active, a `button "Deselect <Mode>"` appears. Click it to exit. Create image also shows a `button "Deselect Images"`, Create video shows `button "Deselect Videos"`, Canvas shows `button "Deselect Canvas"`.
 
-**Creation section:**
-- `menuitemcheckbox "Create image" description="Visualize and edit"`
-- `menuitemcheckbox "Create video" description="Bring ideas to life"`
-- `menuitemcheckbox "Canvas" description="Code, write, or make slides"`
+**"Import code" dialog:**
+```
+dialog
+  heading "Import code"
+  textbox "GitHub repository or branch URL"
+  button "Upload folder"
+  button "Import"
+  button "Cancel code import"
+```
 
-**Tools section:**
-- `button "More tools"` — expands submenu with:
-  - `menuitemcheckbox "Deep research" description="Get detailed reports"`
-  - `menuitemcheckbox "Create music" description="Make audio tracks"`
-  - `menuitemcheckbox "Guided learning" description="Study and learn new things"`
-  - `switch "Personal Intelligence"` — **must be unchecked** for clean responses
+## Complete Settings Menu
 
-## Models & Thinking Levels
+```
+button "Settings" (bottom of sidebar, haspopup="menu")
+└── menu (orientation="vertical")
+    ├── menuitem "Activity"
+    ├── menuitem "Personal Intelligence"
+    ├── menuitem "Import memory to Gemini"
+    ├── menuitem "Avatar"
+    ├── menuitem "Usage Limits"
+    ├── menuitem "Scheduled actions"
+    ├── menuitem "Gems"
+    ├── menuitem "Your public links"
+    ├── menuitem "Theme"                    → submenu: System / Light / Dark (menuitemradio)
+    ├── menuitem "Manage subscription"
+    ├── menuitem "Upgrade to Google AI Ultra"
+    ├── menuitem "NotebookLM"
+    ├── menuitem "Send feedback"
+    ├── menuitem "Help"                     → has submenu
+    ├── menuitem "Portland, OR, USA ..."   → location indicator
+    └── menuitem "Update location"
+```
 
-Click mode picker -> select model -> select thinking level. Use **substring matching** for all menuitems — the `"Selected "` prefix varies.
+## Models & Thinking
 
-| Model | Substring to match |
-|-------|--------------------|
+Substring match — `"Selected "` prefix varies. Selecting a model closes the menu; reopen for thinking level.
+
+| Model | Match |
+|-------|-------|
 | 3.1 Flash-Lite | `"Flash-Lite"` |
 | 3.5 Flash | `"3.5 Flash"` |
 | 3.1 Pro | `"3.1 Pro"` |
 
-**Important:** Selecting a model closes the menu. To change thinking level after model selection, reopen the mode picker.
+Thinking: menuitem starts with `"Thinking level"` → `"Standard"` / `"Extended"`. Default: 3.1 Pro + Extended.
 
-Thinking level menuitem starts with `"Thinking level"`. Submenu:
-- `"Standard"` (in `"Selected Standard Best for most questions"`)
-- `"Extended"` (in `"Extended Complex problem solving"`)
+## Response State Machine
 
-**Default:** 3.1 Pro + Extended unless user specifies otherwise.
+| State | Button | Edit btn | Response area |
+|-------|--------|----------|---------------|
+| Idle | `"Send message"` enabled | N/A | N/A |
+| Generating | `"Stop response"` | disabled | `generic busy` |
+| Complete | `"Send message"` disabled | enabled | `live="polite"`, `button "Good response"` + `"Bad response"` |
 
-Mode picker label updates to reflect selection: `"Open mode picker, currently Pro"`, `"Open mode picker, currently Flash"`, `"Open mode picker, currently Flash Extended"`, etc.
-
-## Response Completion Detection
-
-After sending a prompt, the UI transitions through 3 states. Use these reliable markers:
-
-| State | Send/Stop button | Edit button | Response area | Key indicators |
-|-------|-----------------|-------------|---------------|----------------|
-| **Idle** | `"Send message"` (enabled when text present) | N/A | N/A | Textbox has content |
-| **Generating** | `"Stop response"` | `disableable disabled` | `generic busy` | User heading appears, Gemini heading appears |
-| **Complete** | `"Send message"` (disabled, empty textbox) | enabled | `live="polite"` | `button "Good response"` + `button "Bad response"` appear |
-
-**`wait_for` pattern** (reliable, tested):
-```
-wait_for -> text: ["Good response", "Bad response"]
-```
-These are the thumbs-up/down feedback buttons that ONLY appear after generation finishes.
-
-Alternative: wait for `"Send message"` to reappear after `"Stop response"` disappears.
+**wait_for completion:** `["Good response", "Bad response"]` — thumbs buttons, only appear when done.
 
 ## Response Page Structure
 
-After a completed exchange (with file upload example):
-
 ```
-[Page title: "<auto-title> - Google Gemini"]
-button "Open menu for conversation actions."
-heading "Conversation with Gemini"
-
-[Optional: button "<filename>" — uploaded file chip]
-
 heading "You said <prompt>"
-  button "Copy prompt"
-  button "Edit"              <- disabled during generation
-
+  button "Copy prompt"   button "Edit"
 heading "Gemini said"
-  generic live="polite"
-    StaticText "<response>"
-  button "Good response"     <- thumbs up (wait_for target)
-  button "Bad response"      <- thumbs down (wait_for target)
-  button "Redo"              <- has submenu (see Flow H)
-  button "Copy"
-  button "Show more options"
-
-textbox "Enter a prompt for Gemini"    <- for follow-up
-button "Send message" (disabled)
-StaticText "Gemini is AI and can make mistakes."
+  generic live="polite" → StaticText <response>
+  button "Good response"   button "Bad response"
+  button "Redo" → submenu: Longer / Shorter / Don't personalize / Try again
+  button "Copy"   button "Show more options"
 ```
-
-Chat is auto-titled by Gemini (e.g., "Test File Content Identification", "A Simple Greeting").
 
 ## Flows
 
-### Flow A: New Chat
-
+### A: New Chat
 ```
-navigate_page -> https://gemini.google.com/app
-take_snapshot -> verify textbox + sidebar present
-```
-
-Before starting any conversation, disable Personal Intelligence:
-
-```
-click -> button "Upload & tools"
-take_snapshot -> find button "More tools" and click
-                 (NOT "More uploads" — they are different buttons)
-take_snapshot -> find switch "Personal Intelligence"
-If checked -> click to disable
-Press Escape to close menu
+navigate → /app → snapshot (verify textbox+sidebar)
+click "Upload & tools" → snapshot → click "More tools" (NOT "More uploads")
+snapshot → if switch "Personal Intelligence" checked → click to disable
+Escape
 ```
 
-The switch must appear without `checked` attribute.
-
-### Flow B: Resume Chat
-
-**Sidebar (preferred):**
+### B: Resume Chat
 ```
-navigate_page -> https://gemini.google.com/app
-If "Recents" collapsed -> click button "Toggle Recents"
-take_snapshot -> click matching chat link
+Sidebar: navigate /app → if Recents collapsed click "Toggle Recents" → click chat link
+URL: navigate /app/<chat_id>
 ```
 
-**Direct URL:**
+### C: Model + Thinking
 ```
-navigate_page -> https://gemini.google.com/app/<chat_id>
-```
-Note: chat_id is used directly, NOT with `c_` prefix. `c_<chat_id>` loads a new empty chat.
-
-### Flow C: Select Model + Thinking
-
-```
-take_snapshot -> click button whose label starts with "Open mode picker"
-take_snapshot -> click model menuitem (substring match)
-  NOTE: menu closes after model selection — reopen for thinking level
-take_snapshot -> click button "Open mode picker" again
-take_snapshot -> click menuitem whose label starts with "Thinking level"
-take_snapshot -> click menuitem containing "Standard" or "Extended"
-Press Escape to close
+click "Open mode picker, ..." → snapshot → click model menuitem
+(reopen picker — model selection closes menu)
+click "Open mode picker, ..." → click "Thinking level ..." → click "Standard"/"Extended"
+Escape
 ```
 
-### Flow D: Upload Files
-
-Bridge pattern — Gemini's real file input is hidden, dynamically created by Angular.
-
-**Step 1: Create bridge**
+### D: File Upload (Bridge)
 ```
-evaluate_script:
-() => {
-  let bridge = document.getElementById('mcp-bridge');
-  if (!bridge) {
-    bridge = document.createElement('input');
-    bridge.type = 'file';
-    bridge.id = 'mcp-bridge';
-    bridge.multiple = true;
-    bridge.setAttribute('aria-label', 'MCP bridge');
-    bridge.style.cssText = 'position:fixed;top:60px;left:200px;z-index:99999;width:100px;height:30px;display:block;opacity:1;';
-    document.body.appendChild(bridge);
-  }
-  return 'Bridge ready';
-}
+1. evaluate_script: create <input id="mcp-bridge" type="file" multiple> (idempotent)
+2. snapshot → find "MCP bridge" → upload_file to bridge uid
+3. click "Upload & tools" → snapshot → click "Upload files. Documents, data, code files"
+   (creates input[name="Filedata"] in DOM, file picker opens — ignore it)
+4. evaluate_script: DataTransfer bridge.files → input[name="Filedata"] → dispatch change event
+```
+Files appear as chips. Send enables ~1-2s. Multi-file: stash pattern (see below).
+
+### E: Send & Read
+```
+fill textbox (must use fill — Quill.js CSP blocks evaluate_script)
+click "Send message" → wait_for ["Good response", "Bad response"]
+snapshot → extract text from generic live="polite" after "Gemini said"
 ```
 
-**Step 2: Upload to bridge**
+### F: Stop Mid-Generation
 ```
-take_snapshot -> find bridge by label "MCP bridge"
-upload_file -> uid=<bridge_uid>, filePath=<absolute_path>
-
-IMPORTANT: upload_file REPLACES bridge.files on each call.
-For multi-file, use Stash Pattern (see below).
+wait_for ["Stop response"] → click "Stop response"
+wait_for ["Good response", "Bad response", "Send message"]
 ```
 
-**Step 3: Open Gemini upload dialog**
+### G: Edit & Resend
 ```
-click -> button "Upload & tools"
-take_snapshot -> find menuitem "Upload files. Documents, data, code files"
-click -> that menuitem
-```
-This creates `input[name="Filedata"]` in the DOM and opens native file picker (ignore it).
-
-**Step 4: Transfer bridge -> Gemini**
-```
-evaluate_script:
-async () => {
-  const bridge = document.getElementById('mcp-bridge');
-  if (!bridge || !bridge.files.length) return 'No files on bridge';
-  const names = Array.from(bridge.files).map(f => f.name).join(', ');
-
-  const geminiInput = document.querySelector('input[name="Filedata"]');
-  if (!geminiInput) return 'Gemini input not found — click "Upload files" first';
-
-  const dt = new DataTransfer();
-  for (const file of bridge.files) dt.items.add(file);
-  geminiInput.files = dt.files;
-  geminiInput.dispatchEvent(new Event('change', { bubbles: true }));
-
-  return 'OK: ' + names;
-}
+click "Edit" on user message → fill textbox "Edit prompt" → click "Update"
+Update disabled until text differs from original.
+wait_for ["Good response", "Bad response"]
 ```
 
-Files appear as chips above textbox. Send button enables after ~1-2s.
-
-### Flow E: Send Prompt & Read Response
-
+### H: Redo
 ```
-fill -> uid=<textbox_uid>, value=<prompt>
-  Must use fill tool — evaluate_script blocked by Quill.js CSP
-
-click -> button "Send message"
-
-wait_for -> text: ["Good response", "Bad response"]
-
-take_snapshot -> extract response text from generic live="polite" after "Gemini said" heading
+click "Redo" → submenu: "Longer" / "Shorter" / "Don't personalize" / "Try again"
+click option → wait_for ["Good response", "Bad response"]
 ```
 
-To send with uploaded files: files must be attached first (Flow D), textbox filled, then Send clicked.
-
-### Flow F: Stop Response Mid-Generation
-
+### I: Image Generation
 ```
-wait_for -> text: ["Stop response"]
-click -> button "Stop response"
-wait_for -> text: ["Good response", "Bad response", "Send message"]
-take_snapshot -> partial response in generic live="polite"
+click "Upload & tools" → click menuitemcheckbox "Create image"
+Mode activates: 20 style templates, "Create with Nano Banana 2"
+fill textbox with image description → send
+Exit: click "Deselect Images"
 ```
 
-After stopping, partial response is shown with full feedback buttons (Good/Bad/Redo).
-
-### Flow G: Edit Prompt & Resend
-
+### J: Video Generation
 ```
-take_snapshot -> click button "Edit" on the user message
-take_snapshot -> find textbox "Edit prompt" (NOT the main textbox)
-fill -> uid=<edit_textbox_uid>, value=<revised prompt>
-click -> button "Update"
-wait_for -> text: ["Good response", "Bad response"]
+click "Upload & tools" → click menuitemcheckbox "Create video"
+Mode activates: 18 templates, "Create with Omni", aspect ratio "Landscape (16:9)"
+fill textbox with video description → send
+Exit: click "Deselect Videos"
 ```
 
-Edit mode creates a dedicated `textbox "Edit prompt"` above the response, with `button "Cancel"` and `button "Update"`. Update is disabled until text changes from original.
-
-### Flow H: Redo / Regenerate
-
+### K: Canvas
 ```
-take_snapshot -> click button "Redo"
-take_snapshot -> Redo submenu appears with:
-  - menuitem "Longer"
-  - menuitem "Shorter"
-  - menuitem "Don't personalize"
-  - menuitem "Try again"
-click desired option
-wait_for -> text: ["Good response", "Bad response"]
+click "Upload & tools" → click menuitemcheckbox "Canvas"
+Mode for coding, writing, slides.
+Exit: click "Deselect Canvas"
 ```
 
-For simple regeneration without options, click "Try again".
-
-## Multi-File Upload (Stash Pattern)
-
-`upload_file` replaces bridge files on each call. For multiple files:
-
+### L: Import Code
 ```
-evaluate_script -> create bridge
-evaluate_script -> window._stash = []
-upload_file -> file 1
-evaluate_script -> window._stash = Array.from(bridge.files)
-upload_file -> file 2 (replaces bridge.files)
-evaluate_script ->
-  const dt = new DataTransfer();
-  for (const f of [...window._stash, ...bridge.files]) dt.items.add(f);
-  bridge.files = dt.files;
-Then proceed with Flow D steps 3-4 as usual.
+click "Upload & tools" → click "More uploads" → click "Import code"
+dialog with: textbox "GitHub repository or branch URL" + button "Upload folder" + button "Import"
 ```
 
-**Stash cleanup:** After successful transfer, run `delete window._stash` to avoid stale state.
+### M: Notebooks
 
-## Cleanup
-
-After use, remove bridge to keep DOM clean:
+**Create:**
 ```
-evaluate_script:
-() => {
-  const bridge = document.getElementById('mcp-bridge');
-  if (bridge) { bridge.remove(); return 'Bridge removed'; }
-  return 'No bridge';
-}
+navigate /notebooks/create → snapshot → fill textbox "Name of the notebook"
+snapshot → click unlabeled button (appears after text) → wait_for ["Add sources"]
+```
+
+**Add sources:**
+```
+click "Add sources" → dialog "Sources" with 4 options:
+  - menuitem "Upload files. Documents, data, code files"  (bridge, same as Flow D)
+  - menuitem "Add from Drive. Sheets, Docs, Slides"
+  - menuitem "Add websites" → sub-dialog "Website URLs" with textbox "Paste any links"
+  - menuitem "Copied text" → sub-dialog with textbox "Pasted text"
+```
+
+**Chat:** Sending prompt in a notebook redirects to /app/<chat_id>. Chat appears as `button "Navigate to a recent chat in a notebook"` in the notebook view. Without sources, it's a regular chat.
+
+**Delete:**
+```
+click "Notebook settings" → click "Delete" → dialog "Delete this notebook?"
+click "Delete everywhere" → redirects to /notebooks/view
+```
+
+**Notebook settings menu:** Notebook settings / Pin|Unpin / Rename / Delete
+
+## Multi-File Upload (Stash)
+
+upload_file replaces bridge.files each call. For N files:
+```
+create bridge → window._stash = []
+upload file1 → window._stash = Array.from(bridge.files)
+upload file2 →
+  dt = new DataTransfer()
+  for (f of [...stash, ...bridge.files]) dt.items.add(f)
+  bridge.files = dt.files
+proceed with Flow D steps 3-4. Cleanup: delete window._stash
+```
+
+## Bridge Cleanup
+
+```
+evaluate_script: document.getElementById('mcp-bridge')?.remove()
 ```
 
 ## Error Recovery
 
 | Symptom | Fix |
 |---------|-----|
-| "Gemini input not found" | Upload dialog not open. Re-click "Upload & tools" -> "Upload files" |
-| Send button still disabled | Files processing. Wait 2-3s, take_snapshot |
-| Bridge empty after navigation | SPA nav preserves bridge, full nav kills it. Recreate bridge and re-upload |
-| Mode picker closed | Click again (model selection closes the menu automatically) |
-| Model/thinking menuitem not found | Use substring match, not exact match |
-| Upload files menuitem invisible | The menuitem is inside `menu "Upload file options"` — may need re-snapshot |
-| "Update" disabled in edit mode | Text must differ from original; fill with modified text |
-| Wrong chat loaded via URL | Use `app/<chat_id>` not `app/c_<chat_id>` — `c_` prefix loads a new chat |
-
-## Notebooks
-
-Gemini Notebooks are RAG containers that organize source-grounded conversations. Each notebook contains sources (documents, websites, text) and linked chats that answer questions grounded in those sources.
-
-### URL Patterns
-
-| Action | URL |
-|--------|-----|
-| All notebooks | `https://gemini.google.com/notebooks/view` |
-| Specific notebook | `https://gemini.google.com/notebook/<notebook_id>` |
-| Create notebook | `https://gemini.google.com/notebooks/create` |
-
-Notebook IDs are UUIDs (e.g., `7b030296-780c-44c1-a839-8d16d4188c6b`).
-
-### Sidebar
-
-The `button "Toggle Notebooks"` section in the sidebar lists all notebooks. Each notebook link shows its title. Active notebooks have an `button "Open notebook actions menu"` next to them. The "All notebooks" link navigates to the full list view showing each notebook's source count and emoji icon.
-
-### Notebook Page Structure
-
-```
-link "NotebookLM button"        <- opens in notebooklm.google.com
-button "Notebook settings"      <- menu: Notebook settings, Pin/Unpin, Rename, Delete
-
-heading "<notebook name>"
-button "Add sources"            <- opens Sources dialog
-
-[Navigate to a recent chat in a notebook]  <- one button per chat in this notebook
-
-textbox "Enter a prompt for Gemini"        <- same chat interface
-button "Send message"
-button "Open mode picker, ..."
-```
-
-### Notebook Settings Menu
-
-Clicking `button "Notebook settings"` opens:
-- `menuitem "Notebook settings"`
-- `menuitem "Pin"` or `"Unpin"` (toggles pinned state)
-- `menuitem "Rename"`
-- `menuitem "Delete"` — opens `dialog "Delete this notebook?"` with `button "Delete everywhere"`
-
-### Flow I: Create Notebook
-
-```
-navigate_page -> https://gemini.google.com/notebooks/create
-take_snapshot -> find heading "Name your notebook"
-fill -> textbox "Name of the notebook", value=<name>
-take_snapshot -> find button (unlabeled, appears after text entry) and click
-wait_for -> text: ["Add sources"]
-```
-Notebook is created and appears in sidebar.
-
-### Flow J: Add Sources to Notebook
-
-```
-click -> button "Add sources"
-take_snapshot -> dialog appears with heading "Sources" and 4 options:
-  - menuitem "Upload files. Documents, data, code files"   <- same bridge pattern as Flow D
-  - menuitem "Add from Drive. Sheets, Docs, Slides"
-  - menuitem "Add websites"                                 <- opens "Website URLs" sub-dialog
-  - menuitem "Copied text"                                  <- opens "Add text" sub-dialog
-click desired option
-```
-
-**Add websites sub-dialog:**
-```
-dialog "Website URLs"
-  textbox "Paste any links" multiline
-  button "Insert" (disabled until URLs entered)
-  button "Cancel"
-```
-
-**Copied text sub-dialog:**
-```
-dialog
-  textbox "Pasted text" multiline
-  button "Add text" (disabled until text entered)
-  button "Cancel"
-```
-
-### Flow K: Chat in Notebook
-
-Sending a prompt in a notebook creates a linked chat. The behavior differs based on whether sources exist:
-
-**With sources:** Gemini answers grounded in the notebook's sources. Response stays in the notebook context.
-
-**Without sources:** Gemini redirects to a regular chat (`/app/<chat_id>`). The chat appears in the notebook as a `button "Navigate to a recent chat in a notebook"`. Each subsequent prompt creates a new linked chat.
-
-The response structure is identical to regular chat (Flow E) — "You said" heading, "Gemini said" heading, Good/Bad response buttons, Edit, Redo, etc.
-
-### Flow L: Delete Notebook
-
-```
-click -> button "Notebook settings"
-click -> menuitem "Delete"
-take_snapshot -> dialog "Delete this notebook?"
-click -> button "Delete everywhere"
-```
-
-Deletion is permanent and removes all chats and files from both Gemini and NotebookLM. The page redirects to `notebooks/view`.
+| "Gemini input not found" | Re-click "Upload & tools" → "Upload files" |
+| Send disabled after upload | Wait 2-3s, files still processing |
+| Bridge empty after navigation | SPA preserves, full nav kills. Recreate. |
+| Mode picker closed | Reopen (model selection auto-closes menu) |
+| Menuitem not found | Substring match, not exact |
+| "Update" disabled in edit | Text must differ from original |
+| Wrong chat via URL | Use `/app/<id>` not `/app/c_<id>` |
+| Menu click off-target | Close menus first with Escape, re-snapshot |
 
 ## Limitations
 
-- **Quill.js CSP**: prompt text MUST use `fill` tool, not evaluate_script
-- **Bridge per-page**: bridge dies on full-page navigation; SPA navigation preserves it
-- **upload_file replaces**: each call overwrites bridge.files; use stash for multi-file
-- **UID volatility**: always take_snapshot after any click before finding new UIDs
-- **Model menu closes on select**: reopen picker to change thinking level after model selection
-- **Edit uses separate textbox**: `textbox "Edit prompt"` is distinct from `textbox "Enter a prompt for Gemini"`
-- **Model list hardcoded**: models may change over time; verify with snapshot if selections fail
-- **Temporary chat button disappears**: after first message in a conversation, the button is removed
+- Quill.js CSP: prompt MUST use `fill`, not evaluate_script
+- Bridge dies on full-page nav; SPA nav preserves it
+- upload_file replaces bridge.files; use stash for multi
+- UIDs volatile: snapshot after every click
+- Model menu closes on select: reopen for thinking level
+- Edit uses dedicated `textbox "Edit prompt"` separate from main textbox
+- Model list hardcoded; verify with snapshot if selection fails
+- Temporary chat button disappears after first message in conversation
+- "More uploads" submenu items (Google Photos, Avatar, Notebooks) not deeply tested
