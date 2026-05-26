@@ -1,14 +1,30 @@
 # gemini-web skill
 
-Claude Code skill for automating Google Gemini Web via Chrome DevTools MCP.
+Claude Code skill for automating [Google Gemini Web](https://gemini.google.com) via Chrome DevTools MCP. Provides 12 tested flows covering the complete Gemini interaction lifecycle.
 
 ## Features
 
-- **Chats**: new/existing chats, model selection (3 models x 2 thinking levels)
-- **File upload**: single/multi-file via bridge pattern (works around Angular hidden input)
-- **Prompts**: send prompts (Quill.js CSP-aware), read responses, stop generation
-- **Post-response**: edit & resend, redo/regenerate (Longer/Shorter/Try again)
-- **Notebooks**: create, add sources (files/Drive/websites/text), chat, delete
+### Chat
+- New chats with automatic Personal Intelligence disable
+- Resume existing chats via sidebar or direct URL
+- Model selection: 3.1 Flash-Lite / 3.5 Flash / 3.1 Pro + Standard / Extended thinking
+
+### File Upload
+- Bridge pattern bypasses Angular's hidden file input
+- Single and multi-file upload (stash pattern)
+- Supports any file type Gemini accepts
+
+### Conversation
+- Send prompts (Quill.js CSP-aware — uses `fill` tool)
+- Read responses via accessibility tree
+- Stop generation mid-response
+- Edit prompt & resend (separate `textbox "Edit prompt"`)
+- Redo with sub-options: Longer, Shorter, Don't personalize, Try again
+
+### Notebooks (RAG)
+- Create notebooks and add sources (files, Google Drive, websites, pasted text)
+- Source-grounded Q&A
+- Notebook management: rename, pin/unpin, delete
 
 ## Flows
 
@@ -29,8 +45,23 @@ Claude Code skill for automating Google Gemini Web via Chrome DevTools MCP.
 
 ## Verified
 
-All flows tested end-to-end against gemini.google.com (Pro account) on 2026-05-26.
+All 12 flows tested end-to-end against `gemini.google.com` (Pro account) on 2026-05-26. Every locator string confirmed against the live DOM.
+
+## Prerequisites
+
+- Chrome DevTools MCP connected
+- User logged into gemini.google.com
+- Files to upload exist on local disk
 
 ## Installation
 
-Copy `SKILL.md` to `~/.claude/skills/gemini-web/SKILL.md` and restart Claude Code.
+```bash
+mkdir -p ~/.claude/skills/gemini-web
+cp SKILL.md ~/.claude/skills/gemini-web/SKILL.md
+```
+
+Restart Claude Code or reload skills. The skill triggers on `/gemini-web` or when you ask about Gemini Web operations.
+
+## License
+
+MIT
