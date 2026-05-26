@@ -244,8 +244,11 @@ mkdir <project>/gemini_output/<title>/cleaned/
 Move downloaded file → original/
 ```
 
-**Remove watermark:** See `references/reverse-alpha-blending.md` for theory.
-Run: `uv run --with Pillow --with numpy scripts/remove_watermark.py <input> --alpha 0.01 -o cleaned/cleaned.png`
+**Remove watermark:**
+```
+uv run --with Pillow --with numpy scripts/remove_watermark.py <input> --alpha 0.01 -o cleaned/cleaned.png
+```
+Applies uniform reverse alpha blending to entire image. Effective, simple, visible results.
 
 Exit image mode: click `button "Deselect Images"`.
 
